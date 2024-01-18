@@ -266,12 +266,12 @@ class _WebviewScreenState extends State<WebviewScreen> {
                 return GeolocationPermissionShowPromptResponse(
                     allow: true, retain: true, origin: origin);
               },
-           //   onPermissionRequest: (controller, origin) async {
-             //   return PermissionResponse(
-               //   resources: [],
-                 // action: PermissionResponseAction.GRANT,
-              //  );
-             // },
+               onPermissionRequest: (controller, origin) async {
+  return PermissionResponse(
+    resources: [android.webkit.resource.VIDEO_CAPTURE],
+    action: PermissionResponseAction.GRANT,
+  );
+},
               onLoadStop: (controller, url) {
                 pullToRefreshController.endRefreshing();
               },
