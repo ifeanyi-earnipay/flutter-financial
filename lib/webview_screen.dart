@@ -1,11 +1,11 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:location/location.dart';
+
+import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart'
     hide PermissionStatus;
+import 'package:location/location.dart';
+//import 'package:geolocator/geolocator.dart';
 
 class WebviewScreen extends StatefulWidget {
   final String appId;
@@ -41,18 +41,25 @@ class WebviewScreen extends StatefulWidget {
 }
 
 class _WebviewScreenState extends State<WebviewScreen> {
-  final GlobalKey webViewKey = GlobalKey();
-  late InAppWebViewController _webViewController;
-  double progress = 0;
-  String url = '';
-  late PullToRefreshController pullToRefreshController;
+  InAppWebViewController? _webViewController;
 
-  InAppWebViewSettings options = InAppWebViewSettings(
-    useShouldOverrideUrlLoading: true,
-    mediaPlaybackRequiresUserGesture: false,
-    useHybridComposition: true,
-    allowsInlineMediaPlayback: true,
-    javaScriptEnabled: false,
+  InAppWebViewGroupOptions options = InAppWebViewGroupOptions(
+    crossPlatform: InAppWebViewOptions(
+        clearCache: true,
+        javaScriptEnabled: true,
+        useShouldOverrideUrlLoading: true,
+        mediaPlaybackRequiresUserGesture: false),
+    android: AndroidInAppWebViewOptions(
+      useHybridComposition: true,
+      geolocationEnabled: true,
+    ),
+    ios: IOSInAppWebViewOptions(
+      allowsInlineMediaPlayback: false,
+      
+    ),
+
+
+    
   );
 
   bool isGranted = false;
@@ -67,79 +74,109 @@ class _WebviewScreenState extends State<WebviewScreen> {
   @override
   void initState() {
     super.initState();
-    getPermissions();
-    pullToRefreshController = PullToRefreshController(
-      settings: PullToRefreshSettings(color: Colors.blue),
-      onRefresh: () async {
-        if (Platform.isAndroid) {
-          _webViewController.reload();
-        } else if (Platform.isIOS) {
-          _webViewController.loadUrl(
-            urlRequest: URLRequest(url: await _webViewController.getUrl()),
-          );
-        }
-      },
-    );
+     
+
+     getPermissions();
+    //initiateGeoLocation();
   }
 
-  Future getPermissions() async {
+  // Future<bool> initiateGeoLocation() async {
+  //   log("it works");
+  //   bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+  //   if (!serviceEnabled) {
+  //     print('Location services are disabled.');
+  //     return false;
+  //   }
+
+  //   LocationPermission permission = await Geolocator.checkPermission();
+
+  //   if (permission == LocationPermission.denied) {
+  //     permission = await Geolocator.requestPermission();
+  //     print('Location permissions are denied main.');
+  //     return false;
+  //   }
+
+  //   if (permission == LocationPermission.deniedForever) {
+  //     print(
+  //         'Location permissions are permanently denied, we cannot request permissions.');
+  //     return false;
+  //   }
+
+  //   Geolocator.getPositionStream().listen((Position position) {
+  //     // Update the location icon in the webview widget.
+  //     // ...
+
+  //     print('Listen to Current main Location: $permission');
+  //   });
+
+  //   setState(() {
+  //     isLocationGranted = true;
+  //   });
+
+  //   log(permission.name);
+  //   return true;
+  // }
+
+Future getPermissions() async {
+
+
+
     await initLocationPermissions();
+
     await initPermissions();
-  }
+
+
+
+   
+}
 
   Future initPermissions() async {
-    await Permission.camera.request().then((value) {
-      if (value.isPermanentlyDenied) {
-        openAppSettings();
-      }
-    });
     if (await Permission.camera.request().isGranted) {
       setState(() {
         isGranted = true;
-      });
-    } else {
-      Permission.camera.onDeniedCallback(() {
-        Permission.camera.request();
       });
     }
   }
 
   Future initLocationPermissions() async {
-    bool serviceEnabled;
+    bool _serviceEnabled;
 
     Location location = Location();
 
-    LocationData locationData;
+    LocationData _locationData;
 
-    PermissionStatus permissionGranted;
+    PermissionStatus _permissionGranted;
 
-    serviceEnabled = await location.serviceEnabled();
+    print("Before Permissions");
 
-    if (!serviceEnabled) {
+    _serviceEnabled = await location.serviceEnabled();
+ 
+    if (!_serviceEnabled) {
       print("Inside _serviceEnabled");
 
-      print(serviceEnabled);
-      serviceEnabled = await location.requestService();
-      if (!serviceEnabled) {
+      print(_serviceEnabled);
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
         print("Inside !_serviceEnabled");
 
-        print(serviceEnabled);
+        print(_serviceEnabled);
 
         return true;
       }
     }
 
-    permissionGranted = await location.hasPermission();
-    if (permissionGranted == PermissionStatus.denied) {
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
       print("Inside Permission denied");
 
-      print(permissionGranted);
+      print(_permissionGranted);
 
-      permissionGranted = await location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
         print("Inside Permission granted");
 
-        print(permissionGranted);
+        print(_permissionGranted);
         setState(() {
           isLocationPermissionGranted = true;
         });
@@ -147,45 +184,73 @@ class _WebviewScreenState extends State<WebviewScreen> {
       }
     }
 
-    locationData = await location.getLocation();
+    _locationData = await location.getLocation();
 
-    final latitude = locationData.latitude;
+    print("Location Data");
 
-    final longitude = locationData.longitude;
+    print(_locationData);
+
+    final latitude = _locationData.latitude;
+
+    final longitude = _locationData.longitude;
+
+    print("longitude");
+    print(longitude);
 
     DateTime dateTime = DateTime.now();
 
     final timeZoneName = dateTime.timeZoneName;
     final timeZoneOffset = dateTime.timeZoneOffset;
 
-    locationObject = {
+    final _locationObject = {
       "lat": latitude,
       "long": longitude,
       "timezone": timeZoneName,
       //"timezoneOffset" : timeZoneOffset,
     };
 
+    // print("After Location data");
+    // print(dateTime.timeZoneName);
+
+    // print(latitude);
+    // print(longitude);
+    // print(dateTime.timeZoneOffset);
+
+    print("Permissions");
+    print(_permissionGranted);
+
+    print("Location Object");
+
+    print(json.encode(_locationObject));
+
     if (await Permission.locationWhenInUse.request().isGranted) {
       setState(() {
         isLocationGranted = true;
-        locationData = locationData;
+        locationData = _locationData;
         timeZone = timeZoneName;
         zoneOffset = timeZoneOffset;
-        locationObject = locationObject;
+        locationObject = _locationObject;
       });
+
+
+         //await location.enableBackgroundMode(enable: true);
+
     }
   }
+  // returns an object with the following keys - latitude, longitude, and timezone
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+          //title: const Text("Dojah Widget"),
+          //backgroundColor: Colors.yellow,
+          ),
       body: isGranted
           ? InAppWebView(
-              key: webViewKey,
               initialData: InAppWebViewInitialData(
-                baseUrl: WebUri("https://widget.dojah.io"),
-                historyUrl: WebUri("https://widget.dojah.io"),
+                baseUrl: Uri.parse("https://widget.dojah.io"),
+                androidHistoryUrl: Uri.parse("https://widget.dojah.io"),
                 mimeType: "text/html",
                 data: """
                       <html lang="en">
@@ -231,21 +296,20 @@ class _WebviewScreenState extends State<WebviewScreen> {
                       </html>
                   """,
               ),
-              initialUrlRequest: URLRequest(
-                url: WebUri("https://widget.dojah.io"),
-              ),
-              pullToRefreshController: pullToRefreshController,
+              initialUrlRequest:
+                  URLRequest(url: Uri.parse("https://widget.dojah.io")),
+              initialOptions: options,
               onWebViewCreated: (controller) {
                 _webViewController = controller;
 
-                _webViewController.addJavaScriptHandler(
+                _webViewController?.addJavaScriptHandler(
                   handlerName: 'onSuccessCallback',
                   callback: (response) {
                     widget.success(response);
                   },
                 );
 
-                _webViewController.addJavaScriptHandler(
+                _webViewController?.addJavaScriptHandler(
                   handlerName: 'onCloseCallback',
                   callback: (response) {
                     widget.close(response);
@@ -255,38 +319,27 @@ class _WebviewScreenState extends State<WebviewScreen> {
                   },
                 );
 
-                _webViewController.addJavaScriptHandler(
+                _webViewController?.addJavaScriptHandler(
                   handlerName: 'onErrorCallback',
                   callback: (error) {
                     widget.error(error);
                   },
                 );
               },
-              onGeolocationPermissionsShowPrompt: (controller, origin) async {
+          
+              androidOnGeolocationPermissionsShowPrompt:
+                  (controller, origin) async {
+             
+
                 return GeolocationPermissionShowPromptResponse(
                     allow: true, retain: true, origin: origin);
               },
-              onPermissionRequest: (controller, origin) async {
-                return PermissionResponse(
-                  resources: [],
-                  action: PermissionResponseAction.GRANT,
-                );
+              androidOnPermissionRequest:
+                  (controller, origin, resources) async {
+                return PermissionRequestResponse(
+                    resources: resources,
+                    action: PermissionRequestResponseAction.GRANT);
               },
-              onLoadStop: (controller, url) {
-                pullToRefreshController.endRefreshing();
-              },
-              onReceivedError: (controller, url, code) {
-                pullToRefreshController.endRefreshing();
-              },
-              onProgressChanged: (controller, progress) {
-                if (progress == 100) {
-                  pullToRefreshController.endRefreshing();
-                }
-                setState(() {
-                  this.progress = progress / 100;
-                });
-              },
-              onConsoleMessage: (controller, consoleMessage) {},
             )
           : const Center(child: CircularProgressIndicator()),
     );
