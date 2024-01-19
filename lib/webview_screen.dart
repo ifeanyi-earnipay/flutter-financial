@@ -249,8 +249,8 @@ Future getPermissions() async {
       body: isGranted
           ? InAppWebView(
               initialData: InAppWebViewInitialData(
-                baseUrl: WebUri.parse("https://widget.dojah.io"),
-                androidHistoryUrl: WebUri.parse("https://widget.dojah.io"),
+                baseUrl: WebUri("https://widget.dojah.io"),
+                androidHistoryUrl: WebUri("https://widget.dojah.io"),
                 mimeType: "text/html",
                 data: """
                       <html lang="en">
@@ -297,7 +297,7 @@ Future getPermissions() async {
                   """,
               ),
               initialUrlRequest:
-                  URLRequest(url: WebUri.parse("https://widget.dojah.io")),
+                  URLRequest(url: WebUri("https://widget.dojah.io")),
               initialOptions: options,
               onWebViewCreated: (controller) {
                 _webViewController = controller;
